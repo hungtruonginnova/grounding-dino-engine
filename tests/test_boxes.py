@@ -1,6 +1,6 @@
 """Pure label/box handling - no torch, no model download."""
 
-from app.boxes import clean_labels, normalise
+from app.boxes import clean_labels, label_spans, normalise
 
 
 def test_labels_are_lowercased_and_deduped_in_order():
@@ -55,3 +55,45 @@ def test_detections_are_sorted_by_descending_score():
         1000,
     )
     assert [d["label"] for d in detections] == ["b", "c", "a"]
+
+
+def test_label_spans_finds_one_span_per_label():
+    """'[CLS] car battery . black plastic fuse box lid . [SEP] [PAD]'"""
+    ids = [101, 2482, 6046, 1012, 2304, 4145, 24856, 3482, 11876, 1012, 102, 0]
+    assert label_spans(ids) == [(1, 3), (4, 9)]
+
+
+def test_label_spans_ignores_trailing_padding():
+    assert label_spans([101, 6046, 1012, 102, 0, 0, 0]) == [(1, 2)]
+
+
+def test_label_spans_handles_a_prompt_with_no_final_delimiter():
+    assert label_spans([101, 6046]) == [(1, 2)]
+
+
+def test_question_marks_are_stripped_so_indices_cannot_shift():
+    """'?' is a phrase delimiter to the model: left in, one label would occupy
+    two spans and every index after it would be out by one."""
+    labels = clean_labels(["is this a hose?", "battery"])
+    assert labels == ["is this a hose", "battery"]
+    assert all("?" not in label for label in labels)
+
+
+def test_attribution_survives_a_dropped_noise_box():
+    """A box culled by MIN_BOX_SIDE must not shift the labels of the rest."""
+    detections = normalise(
+        [[10, 10, 12, 400], [128, 100, 256, 200]],
+        [0.9, 0.8],
+        ["battery", "air filter box"],
+        1280,
+        1000,
+        indices=[0, 1],
+        margins=[0.5, 0.4],
+    )
+    assert [(d["label"], d["labelIndex"]) for d in detections] == [("air filter box", 1)]
+
+
+def test_attribution_is_absent_when_not_supplied():
+    """The legacy phrase path stays byte-compatible for an older caller."""
+    detections = normalise([[128, 100, 256, 200]], [0.8], ["battery"], 1280, 1000)
+    assert "labelIndex" not in detections[0]

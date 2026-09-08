@@ -18,12 +18,18 @@ class Box(BaseModel):
 
 
 class Detection(BaseModel):
-    # The raw phrase GroundingDINO decoded, NOT a canonical component name.
-    # Mapping it back onto the vocabulary is the caller's job - the sidecar
-    # deliberately knows nothing about the component vocabulary.
+    # The label this box was won by, verbatim from the cleaned request list -
+    # NOT a canonical component name. Mapping it onto a vocabulary is the
+    # caller's job; the sidecar deliberately knows nothing about one.
     label: str
     score: float
     box: Box
+    # Index into GroundResponse.labels. Prefer it over `label`: it is exact,
+    # where the string is only as good as the caller's matching.
+    labelIndex: int | None = None
+    # How far the winning label beat the runner-up. Small means the query was
+    # genuinely torn between two labels.
+    margin: float | None = None
 
 
 class GroundRequest(BaseModel):
@@ -41,10 +47,16 @@ class GroundRequest(BaseModel):
         # rather than silently returning nonsense boxes.
         if any("." in label for label in labels):
             raise ValueError("labels must not contain '.'")
+        # "?" is a phrase delimiter to the model, so one inside a label splits
+        # it into two spans and puts every label index after it out by one.
+        if any("?" in label for label in labels):
+            raise ValueError("labels must not contain '?'")
         return labels
 
 
 class GroundResponse(BaseModel):
     detections: list[Detection]
     frame: tuple[int, int]
+    # The cleaned, fitted label list that labelIndex points into.
+    labels: list[str] = []
     meta: dict

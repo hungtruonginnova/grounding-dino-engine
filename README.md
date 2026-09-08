@@ -63,6 +63,38 @@ first MPS inference spends seconds compiling Metal kernels.
 - `POST /ground` - body `{"imageBase64": ..., "labels": [...], "boxThreshold"?: ..., "textThreshold"?: ...}`,
   returns normalised detections.
 
+## How a box gets its label
+
+Each detection carries a `labelIndex` into `labels` - the cleaned, deduped,
+possibly trimmed list the model was actually prompted with, echoed back in the
+response because the caller cannot reconstruct that order itself. Read the
+index, not the string.
+
+This replaces `post_process_grounded_object_detection`, which decodes a phrase
+by concatenating every text token above `textThreshold` with no phrase
+boundaries whatsoever, so a query attending across two adjacent labels comes
+back as one merged string like `"large black plastic air filter housing
+underside hood"` and the caller has to guess what it meant. Guessing attached
+boxes to the wrong objects.
+
+Instead each label's token span in the merged prompt is scored separately and
+the box goes to the span that won. The delimiters used to find those spans -
+`[CLS]`, `[SEP]`, `.`, `?`, `[PAD]` - are the same ones the model uses to build
+its block-diagonal text attention mask, so a span here means what a phrase
+means to the model. `margin` reports how far the winning label beat the
+runner-up; a small margin is a genuinely ambiguous query.
+
+Two consequences:
+
+- `score` is unchanged. It is a max over the same token positions the upstream
+  code takes its max over, so no threshold needs retuning.
+- `textThreshold` is accepted and ignored. There is no phrase to decode any
+  more. `meta.attribution` is `"span"` to say so.
+
+Labels must not contain `.` or `?`: both are phrase delimiters, and one inside
+a label would split it into two spans and put every later index out by one.
+The request validator rejects them.
+
 ## Tests
 
 ```bash
