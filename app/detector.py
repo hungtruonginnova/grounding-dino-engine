@@ -73,11 +73,11 @@ def require_device(device: str) -> None:
         f"GROUNDING_REQUIRE_DEVICE={required} but the usable device is "
         f"{device!r}. torch={build['torch']} cudaBuild={build['cudaBuild']} "
         f"cudaAvailable={build['cudaAvailable']}. "
-        "A None cudaBuild means this image was built with the CPU-only wheel "
-        "(build with REQUIREMENTS=requirements.txt); a CUDA build with "
-        "cudaAvailable=False means the container was started without GPU "
-        "access (nvidia-container-toolkit, and --gpus all or a compose "
-        "device reservation)."
+        "A None cudaBuild means torch was installed without CUDA support "
+        "(check requirements.txt was installed, not a CPU-only wheel); a "
+        "CUDA build with cudaAvailable=False means the container was started "
+        "without GPU access (nvidia-container-toolkit, and --gpus all or a "
+        "compose device reservation)."
     )
 
 

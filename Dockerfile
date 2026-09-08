@@ -2,19 +2,13 @@
 FROM python:3.12-slim AS builder
 
 WORKDIR /build
-# requirements-cpu.txt pins the CPU wheel index, which keeps the image at
-# ~1.5GB instead of ~6GB by skipping the nvidia-* CUDA wheels that plain
-# `torch` pulls in as dependencies.
-#
-# On a CUDA host (DGX and friends) build with the full requirements instead:
-#   docker build --build-arg REQUIREMENTS=requirements.txt ./grounding
-# or `docker compose --profile grounding-gpu build`, which sets it for you.
-# A CPU-only wheel on a GPU host is a SILENT failure - cuda.is_available()
-# returns False and inference quietly runs on CPU - so pair the GPU build
-# with GROUNDING_REQUIRE_DEVICE=cuda.
-ARG REQUIREMENTS=requirements-cpu.txt
-COPY requirements.txt requirements-cpu.txt ./
-RUN pip install --no-cache-dir --prefix=/install -r "$REQUIREMENTS"
+# This image is CUDA-only: it's built and deployed on GPU hosts (DGX Spark
+# and friends), so it always installs the full requirements.txt (CUDA
+# wheels). Pair it with GROUNDING_REQUIRE_DEVICE=cuda so the container
+# refuses to start rather than silently falling back to CPU if it ever ends
+# up on a host without GPU access.
+COPY requirements.txt ./
+RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
 
 
 FROM python:3.12-slim

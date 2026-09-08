@@ -5,8 +5,6 @@ services:
   grounding-gpu:
     build:
       context: .
-      args:
-        REQUIREMENTS: requirements.txt
     image: innova-grounding-gpu:latest
     container_name: innova-grounding-gpu
     ports:

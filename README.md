@@ -23,26 +23,21 @@ python3 -m venv .venv && ./.venv/bin/pip install -r requirements.txt
 Then point the caller at it with `GROUNDING_URL=http://host.docker.internal:8001`
 (caller in Docker) or `http://127.0.0.1:8001` (caller on the host too).
 
-## Run in Docker (CPU)
-
-```bash
-docker build -t innova-grounding .
-docker run --rm -p 8001:8001 -v hf-cache:/models innova-grounding
-```
-
 ## Deploy on a GPU host (DGX Spark and friends)
 
-Requires `nvidia-container-toolkit` on the host:
+This is the only supported Docker deployment target - the image always
+installs the CUDA build of torch from `requirements.txt`. Requires
+`nvidia-container-toolkit` on the host:
 
 ```bash
 docker compose up --build
 ```
 
-This builds with `REQUIREMENTS=requirements.txt` (the CUDA wheel) and sets
-`GROUNDING_REQUIRE_DEVICE=cuda`, so the service refuses to start rather than
-silently falling back to CPU. A CPU-only wheel on a GPU host is otherwise a
-silent failure - `cuda.is_available()` returns `False` and inference quietly
-runs on CPU with nothing in the logs to say why.
+This sets `GROUNDING_REQUIRE_DEVICE=cuda`, so the service refuses to start
+rather than silently falling back to CPU if it ever ends up without GPU
+access. A CPU-only wheel on a GPU host is otherwise a silent failure -
+`cuda.is_available()` returns `False` and inference quietly runs on CPU with
+nothing in the logs to say why.
 
 ## Environment
 

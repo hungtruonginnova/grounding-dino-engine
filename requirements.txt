@@ -1,7 +1,6 @@
 # Host install (macOS/Apple Silicon): the PyPI torch wheel is MPS-capable.
-# For the CPU-only container build use requirements-cpu.txt instead, which
-# pins the CPU wheel index - otherwise pip drags in ~2.5GB of nvidia-* wheels
-# as torch dependencies and the image goes from 1.5GB to 6GB.
+# This is also what the Docker image installs (CUDA wheels) - the image is
+# deployed only on GPU hosts (DGX Spark and friends).
 torch==2.9.1
 transformers==5.16.1
 pillow==11.1.0
