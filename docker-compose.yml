@@ -1,0 +1,40 @@
+# Standalone deploy for the grounding engine (e.g. on a DGX Spark GPU host).
+# The `innova-automotive-detection` API reaches this over the network via
+# GROUNDING_URL=http://<this-host>:8001.
+services:
+  grounding-gpu:
+    build:
+      context: .
+      args:
+        REQUIREMENTS: requirements.txt
+    image: innova-grounding-gpu:latest
+    container_name: innova-grounding-gpu
+    ports:
+      - "${GROUNDING_PORT:-8001}:8001"
+    environment:
+      GROUNDING_MODEL_ID: ${GROUNDING_MODEL_ID:-IDEA-Research/grounding-dino-base}
+      GROUNDING_BOX_THRESHOLD: ${GROUNDING_BOX_THRESHOLD:-0.25}
+      GROUNDING_TEXT_THRESHOLD: ${GROUNDING_TEXT_THRESHOLD:-0.2}
+      GROUNDING_MAX_CONCURRENCY: ${GROUNDING_MAX_CONCURRENCY:-2}
+      # Refuse to start rather than silently fall back to CPU.
+      GROUNDING_REQUIRE_DEVICE: cuda
+      HF_HOME: /models
+    volumes:
+      - hf-cache:/models
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8001/readyz"]
+      interval: 30s
+      timeout: 10s
+      start_period: 300s
+      retries: 3
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: ${GROUNDING_GPU_COUNT:-1}
+              capabilities: [gpu]
+
+volumes:
+  hf-cache:

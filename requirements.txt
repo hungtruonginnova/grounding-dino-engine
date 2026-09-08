@@ -1,0 +1,12 @@
+# Host install (macOS/Apple Silicon): the PyPI torch wheel is MPS-capable.
+# For the CPU-only container build use requirements-cpu.txt instead, which
+# pins the CPU wheel index - otherwise pip drags in ~2.5GB of nvidia-* wheels
+# as torch dependencies and the image goes from 1.5GB to 6GB.
+torch==2.9.1
+transformers==5.16.1
+pillow==11.1.0
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+pydantic==2.10.5
+pytest==8.3.4
+pytest-asyncio==0.25.2
